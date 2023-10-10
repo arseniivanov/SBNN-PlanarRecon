@@ -1,38 +1,57 @@
-import os
-from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader
-from data_loader import KTHDataset
+from data_loader import get_loaders
 
+import torch.nn as nn
+import snntorch as snn
+from snntorch import surrogate
+from snntorch import utils
 
-# Load video paths and labels
-actions = ['walking', 'jogging', 'running', 'boxing', 'handwaving', 'handclapping']
-video_files = []
-labels = []
+from config import num_steps, batch_size, num_classes, beta, spike_grad
+if spike_grad == "fast_sigmoid":
+    from snntorch import surrogate
+    spike_grad = surrogate.fast_sigmoid()
 
-for i, action in enumerate(actions):
-    folder = os.path.join("data/KTH_Dataset", action)
-    for filename in os.listdir(folder):
-        if filename.endswith(".avi"):
-            path = os.path.join(folder, filename)
-            video_files.append(path)
-            labels.append(i)
+train_loader, val_loader, test_loader = get_loaders(batch_size)
 
-# Split data into training, validation, and test sets
-videos_train, videos_test, labels_train, labels_test = train_test_split(video_files, labels, test_size=0.2, random_state=42, stratify=labels)
-videos_train, videos_val, labels_train, labels_val = train_test_split(videos_train, labels_train, test_size=0.25, random_state=42, stratify=labels_train)
-
-train_data = [(v, l) for v, l in zip(videos_train, labels_train)]
-val_data = [(v, l) for v, l in zip(videos_val, labels_val)]
-test_data = [(v, l) for v, l in zip(videos_test, labels_test)]
-
-train_dataset = KTHDataset(train_data)
-val_dataset = KTHDataset(val_data)
-test_dataset = KTHDataset(test_data)
-
-train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=4)
-test_loader = DataLoader(test_dataset, batch_size=4)
 
 # Example of how to iterate through DataLoader
 for batch_idx, (data, target) in enumerate(train_loader):
     print(data.shape, target)
+
+net = nn.Sequential(
+    nn.Conv2d(1, 16, 5),
+    nn.MaxPool2d(2),
+    snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad),
+    nn.Conv2d(16, 32, 5),
+    nn.MaxPool2d(2),
+    snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad),
+    nn.Flatten(),
+    nn.Linear(32 * 28 * 38, 256),  # Adjusted size
+    snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad),
+    nn.Linear(256, num_classes),
+    snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad, output=True)
+)
+
+# Existing code for DataLoader and SNN definition here...
+
+# Initialize spike recordings
+spike_recordings = []
+
+# Reset/initialize hidden states for all neurons
+utils.reset(net)
+
+# Iterate through DataLoader
+for batch_idx, (data, target) in enumerate(train_loader):
+    # Reshape data to be compatible with the SNN
+    data = data.permute(1, 0, 2, 3, 4)
+    
+    # Reset spike recordings for new batch
+    batch_spike_recordings = []
+    
+    # Forward pass through time
+    for step in range(num_steps):
+        spike, state = net(data[step])
+        batch_spike_recordings.append(spike)
+    
+    spike_recordings.append(torch.stack(batch_spike_recordings))
+
+    # Your training logic here...
