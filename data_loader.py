@@ -4,13 +4,15 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
+from config import num_steps
 
 class KTHDataset(Dataset):
-    def __init__(self, video_list, frame_number=80, transform=None, frame_skip=5):
+    def __init__(self, video_list, transform=None, frame_skip=5, use_diff=True):
         self.video_list = video_list
         self.transform = transform
-        self.FIXED_NUM_FRAMES = frame_number
+        self.FIXED_NUM_FRAMES = num_steps
         self.frame_skip = frame_skip
+        self.use_diff = use_diff
 
     def __len__(self):
         return len(self.video_list)
@@ -19,6 +21,7 @@ class KTHDataset(Dataset):
         path, label = self.video_list[idx]
         cap = cv2.VideoCapture(path)
         frames = []
+        prev_frame = None
         frame_count = 0
 
         while(cap.isOpened()):
@@ -26,7 +29,16 @@ class KTHDataset(Dataset):
             if ret:
                 if frame_count % self.frame_skip == 0:
                     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                    frames.append(gray_frame)
+
+                    if self.use_diff:
+                        if prev_frame is not None:
+                            diff_frame = cv2.absdiff(gray_frame, prev_frame)
+                            norm_diff_frame = diff_frame / 255.0
+                            frames.append(norm_diff_frame)
+                        prev_frame = gray_frame
+                    else:
+                        frames.append(gray_frame)
+
                 frame_count += 1
             else:
                 break
@@ -39,16 +51,13 @@ class KTHDataset(Dataset):
         elif len(frames) < self.FIXED_NUM_FRAMES:
             # Zero-pad
             while len(frames) < self.FIXED_NUM_FRAMES:
-                frames.append(np.zeros((120, 160), dtype=np.uint8))
+                frames.append(np.zeros((120, 160), dtype=np.uint8 if not self.use_diff else np.float32))
 
         frames = np.array(frames)
         if self.transform:
             frames = self.transform(frames)
 
         return torch.tensor(frames, dtype=torch.float32).unsqueeze(1), torch.tensor(label, dtype=torch.long)
-
-# Note: The frame_number is updated to 80, as we are taking every 5th frame from 400 frames.
-
 
 def get_loaders(batch_size=4):
     # Load video paths and labels
