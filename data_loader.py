@@ -5,12 +5,12 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 
-
 class KTHDataset(Dataset):
-    def __init__(self, video_list, frame_number=400,transform=None):
+    def __init__(self, video_list, frame_number=80, transform=None, frame_skip=5):
         self.video_list = video_list
         self.transform = transform
         self.FIXED_NUM_FRAMES = frame_number
+        self.frame_skip = frame_skip
 
     def __len__(self):
         return len(self.video_list)
@@ -19,12 +19,15 @@ class KTHDataset(Dataset):
         path, label = self.video_list[idx]
         cap = cv2.VideoCapture(path)
         frames = []
+        frame_count = 0
 
         while(cap.isOpened()):
             ret, frame = cap.read()
             if ret:
-                gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                frames.append(gray_frame)
+                if frame_count % self.frame_skip == 0:
+                    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    frames.append(gray_frame)
+                frame_count += 1
             else:
                 break
 
@@ -44,7 +47,8 @@ class KTHDataset(Dataset):
 
         return torch.tensor(frames, dtype=torch.float32).unsqueeze(1), torch.tensor(label, dtype=torch.long)
 
-# Your existing code for KTHDataset class here...
+# Note: The frame_number is updated to 80, as we are taking every 5th frame from 400 frames.
+
 
 def get_loaders(batch_size=4):
     # Load video paths and labels

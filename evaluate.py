@@ -6,6 +6,8 @@ import snntorch as snn
 from snntorch import surrogate
 from snntorch import utils
 
+import numpy as np
+
 import torch.optim as optim
 from sklearn.metrics import accuracy_score
 
@@ -16,6 +18,7 @@ if spike_grad == "fast_sigmoid":
 train_loader, val_loader, test_loader = get_loaders(batch_size)
 
 net = nn.Sequential(
+    nn.MaxPool2d(2),
     nn.Conv2d(1, 16, 5),
     nn.MaxPool2d(2),
     snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad),
@@ -23,7 +26,7 @@ net = nn.Sequential(
     nn.MaxPool2d(2),
     snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad),
     nn.Flatten(),
-    nn.Linear(31968, 256),  # Adjusted size
+    nn.Linear(6528, 256),  # Adjusted size
     snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad),
     nn.Linear(256, num_classes),
     snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad, output=True)
@@ -69,7 +72,6 @@ for epoch in range(num_epochs):
             # Reset/initialize hidden states for all neurons
             utils.reset(net)
             
-            data = data.unsqueeze(2)  # Add channel dimension
             data = data.permute(1, 0, 2, 3, 4)  # Permute for time steps
 
             # Forward pass through time
