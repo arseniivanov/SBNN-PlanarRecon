@@ -42,7 +42,7 @@ class KTHDataset(Dataset):
         if self.transform:
             frames = self.transform(frames)
 
-        return torch.tensor(frames, dtype=torch.float32), torch.tensor(label, dtype=torch.long)
+        return torch.tensor(frames, dtype=torch.float32).unsqueeze(1), torch.tensor(label, dtype=torch.long)
 
 # Your existing code for KTHDataset class here...
 
