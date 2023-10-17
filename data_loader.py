@@ -45,15 +45,16 @@ class KTHDataset(Dataset):
 
         cap.release()
 
-        # Normalize the number of frames to FIXED_NUM_FRAMES
-        if len(frames) > self.FIXED_NUM_FRAMES:
-            frames = frames[:self.FIXED_NUM_FRAMES]  # Truncate
-        elif len(frames) < self.FIXED_NUM_FRAMES:
-            # Zero-pad
-            while len(frames) < self.FIXED_NUM_FRAMES:
-                frames.append(np.zeros((120, 160), dtype=np.uint8 if not self.use_diff else np.float32))
-
         frames = np.array(frames)
+
+        # Zero pad to ensure all video samples have FIXED_NUM_FRAMES
+        if len(frames) < self.FIXED_NUM_FRAMES:
+            pad_len = self.FIXED_NUM_FRAMES - len(frames)
+            zero_pad = np.zeros((pad_len, 120, 160), dtype=np.uint8 if not self.use_diff else np.float32)
+            frames = np.concatenate((frames, zero_pad), axis=0)
+        elif len(frames) > self.FIXED_NUM_FRAMES:
+            frames = frames[:self.FIXED_NUM_FRAMES]
+
         if self.transform:
             frames = self.transform(frames)
 
@@ -81,12 +82,12 @@ def get_loaders(batch_size=4):
     val_data = [(v, l) for v, l in zip(videos_val, labels_val)]
     test_data = [(v, l) for v, l in zip(videos_test, labels_test)]
 
-    train_dataset = KTHDataset(train_data)
-    val_dataset = KTHDataset(val_data)
-    test_dataset = KTHDataset(test_data)
+    train_dataset = KTHDataset(train_data, use_diff=True)
+    val_dataset = KTHDataset(val_data, use_diff=True)
+    test_dataset = KTHDataset(test_data, use_diff=True)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, drop_last=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, drop_last=True)
 
     return train_loader, val_loader, test_loader
