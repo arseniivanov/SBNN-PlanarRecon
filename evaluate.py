@@ -12,41 +12,47 @@ import numpy as np
 import torch.optim as optim
 from sklearn.metrics import accuracy_score
 
-from architectures import RecurrentSNN
+from architectures import RecurrentSNN, CorticalColumnNetV4
 
-from config import num_steps, batch_size, num_classes, beta, spike_grad
+from config import num_steps, batch_size, num_classes, beta, spike_grad, net
 if spike_grad == "fast_sigmoid":
     spike_grad = surrogate.fast_sigmoid()
 
 train_loader, val_loader, test_loader = get_loaders(batch_size)
 
-net = RecurrentSNN(beta, spike_grad)
+if net == "RecurrentSNN":
+    net = RecurrentSNN(beta, spike_grad)
+else:
+    net = CorticalColumnNetV4()
+
+
+net = net.to(net.device)
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=0.005)
+optimizer = optim.Adam(net.parameters(), lr=0.05)
 
 # Number of epochs
-num_epochs = 10
+num_epochs = 30
 train_loader_elements = len(train_loader.dataset)
-best_val_accuracy = 0.0
+best_val_accuracy = 0.39
 
 for epoch in range(num_epochs):
     
     net.train()
     epoch_train_loss = 0
 
-    with tqdm(total=train_loader_elements, desc=f"Epoch {epoch+1}/{num_epochs}", postfix={'train_loss':0.0, 'val_acc':0.0}) as pbar:
+    with tqdm(total=train_loader_elements, desc=f"Epoch {epoch+1}/{num_epochs}") as pbar:
 
         # Training loop
         for batch_idx, (data, target) in enumerate(train_loader):
+            data, target = data.to(net.device), target.to(net.device)
             optimizer.zero_grad()
             
             # Reset/initialize hidden states for all neurons
             utils.reset(net)
 
             data = data.permute(1, 0, 2, 3, 4)  # Permute for time steps
-
             spike = net(data)
             
             loss = criterion(spike, target)
@@ -64,6 +70,7 @@ for epoch in range(num_epochs):
 
         with torch.no_grad():
             for batch_idx, (data, target) in enumerate(val_loader):
+                data, target = data.to(net.device), target.to(net.device)
                 # Reset/initialize hidden states for all neurons
                 utils.reset(net)
                 

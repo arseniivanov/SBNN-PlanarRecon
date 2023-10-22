@@ -1,7 +1,6 @@
-from data_loader import get_loaders
-
 import torch.nn as nn
 import snntorch as snn
+import torch.nn.functional as F
 
 from config import num_steps, num_classes, DEBUG
 
@@ -20,7 +19,8 @@ class RecurrentSNN(nn.Module):
         self.leaky4 = snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad)
         self.leaky_out = snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad, output=True)
 
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0.3)
+        self.device = "cpu"
 
     def forward(self, x):
         recurrent_spike = None
@@ -58,3 +58,47 @@ class RecurrentSNN(nn.Module):
             recurrent_spike = self.dropout(spike1)  # Store spike for recurrent connection
 
         return spike_out
+
+
+# Adjusting the architecture to use strides for dimensionality reduction in convolutional layers
+
+class CorticalColumnNetV4(nn.Module):
+    def __init__(self):
+        super(CorticalColumnNetV4, self).__init__()
+        
+        self.conv1 = nn.Conv2d(1, 16, 3, stride=2, padding=1)
+        self.conv2 = nn.Conv2d(16, 32, 3, stride=2, padding=1)
+        
+        # Using GRU instead of LSTM
+        self.gru = nn.GRU(32 * 30 * 40, 128, num_layers=2, batch_first=True)
+        
+        self.fc1 = nn.Linear(128, 64)
+        self.dropout1 = nn.Dropout(0.4)
+        self.fc2 = nn.Linear(64, 32)
+        self.dropout2 = nn.Dropout(0.4)
+        
+        self.fc_out = nn.Linear(32, num_classes)
+        self.device = "cuda"
+        
+    def forward(self, x):
+        timesteps, batch_size, C, H, W = x.size()
+        
+        c_in = x.permute(1, 0, 2, 3, 4).contiguous().view(-1, C, H, W)
+        
+        c_out = F.relu(self.conv1(c_in))
+        c_out = F.relu(self.conv2(c_out))
+        
+        r_in = c_out.view(batch_size, timesteps, -1)
+        
+        # Using GRU
+        r_out, hn = self.gru(r_in)
+        r_out_last = r_out[:, -1, :]
+        
+        f_out = F.relu(self.fc1(r_out_last))
+        f_out = self.dropout1(f_out)
+        f_out = F.relu(self.fc2(f_out))
+        f_out = self.dropout2(f_out)
+        
+        out = self.fc_out(f_out)
+        
+        return out

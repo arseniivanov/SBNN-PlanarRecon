@@ -4,3 +4,4 @@ num_classes = 6  # For the 6 action categories in KTH dataset
 beta = 0.7  # Neuron decay rate
 spike_grad = "fast_sigmoid" # Surrogate gradient
 DEBUG = False
+net = "RecurrentSNN"
