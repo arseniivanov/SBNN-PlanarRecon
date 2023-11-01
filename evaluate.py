@@ -14,7 +14,7 @@ import numpy as np
 import torch.optim as optim
 from sklearn.metrics import accuracy_score
 
-from architectures import RecurrentSNN, CorticalColumnNetV4, RecurrentSNN_v2
+from architectures import RecurrentSNN, CorticalColumnNetV4, RecurrentSNN_v2, RecurrentSNN_v3
 
 from config import num_steps, batch_size, num_classes, beta, spike_grad, net
 if spike_grad == "fast_sigmoid":
@@ -23,29 +23,29 @@ if spike_grad == "fast_sigmoid":
 train_loader, val_loader, test_loader = get_loaders(batch_size)
 
 if net == "RecurrentSNN":
-    net = RecurrentSNN_v2(beta, spike_grad)
+    net = RecurrentSNN_v3(beta, spike_grad)
 else:
     net = CorticalColumnNetV4()
 
 
 net = net.to(net.device)
 
-model_path = "63.39_snn_v2.pth"
-model_weights = torch.load(model_path, map_location=net.device)
+#model_path = "63.39_snn_v2.pth"
+#model_weights = torch.load(model_path, map_location=net.device)
 
 # Load the weights into the network architecture
-net.load_state_dict(model_weights)
+#net.load_state_dict(model_weights)
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
 
-optimizer = optim.Adam(net.parameters(), lr=0.005, weight_decay=1e-5)  # L2 regularization
+optimizer = optim.Adam(net.parameters(), lr=0.009, weight_decay=1e-5)  # L2 regularization
 
 scheduler = StepLR(optimizer, step_size=5, gamma=0.7)
 
 
 # Number of epochs
-num_epochs = 30
+num_epochs = 40
 train_loader_elements = len(train_loader.dataset)
 best_val_accuracy = 0.63
 
