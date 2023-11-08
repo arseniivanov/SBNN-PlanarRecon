@@ -11,7 +11,23 @@ RecurrentSNN - 40%, 30 epochs
 RecurrentSNN + topk + attention - 63%, 30 epochs
 
 
+Example confusion matrix:
+
+['walking', 'jogging', 'running', 'boxing', 'handwaving', 'handclapping']
+
+[[14  3  3  0  0  0]
+ [ 7  2  8  0  0  0]
+ [ 2  5 12  0  0  0]
+ [ 1  0  1 14  4  0]
+ [ 1  0  2  2 12  2]
+ [ 0  0  1  3  1 12]]
+Test Accuracy: 58.93%
+
+We can see the network has a hard time classifying jogging people. It is putting then mostly in walking or running bucket.
+One can theorize that the 5x5 filters do not have a large enough receptive field to capture this motion in the 120x160 resolution frames
+
 TODO:
 
 Understand why load + eval mode does not function as intended.
 Breakpoint at eval after 1 train loop with low LR + breakpoint at eval only.
+Use first N frames to understand an area of movement, crop the movement only while tracking any movement of the area
