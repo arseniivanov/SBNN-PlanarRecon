@@ -28,10 +28,25 @@ One can theorize that the 5x5 filters do not have a large enough receptive field
 
 It seems like thresholding the difference yields faster training time, but convergeance to the same value.
 
+Example on sequence length after prprocessing:
+
+![Example frame length after prep](frame_length_stats.jpg)
+
 TODO:
 
-Re-make/cache the frame preprocessing in a way where we keep the generators while having information about frame counts and batch buckets
+Adjust cache to contain information about parameters that created the lengths:
+
+frame_skip
+transform
+use_diff
+threshold
+
+If these parameters are not the same, the preprocessing will not be the same, which means that we need to redo the cache.
+
+Adjust samping on a class-basis in order to remove the temporal bias (predictions made from context length)
 
 Understand why load + eval mode does not function as intended.
 Breakpoint at eval after 1 train loop with low LR + breakpoint at eval only.
 Use first N frames to understand an area of movement, crop the movement only while tracking any movement of the area
+
+

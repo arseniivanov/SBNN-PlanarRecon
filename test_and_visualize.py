@@ -5,7 +5,7 @@ import numpy as np
 from snntorch import surrogate
 from sklearn.metrics import accuracy_score
 from architectures import RecurrentSNN_v4
-from config import num_steps, batch_size, num_classes, beta, spike_grad, net
+from config import batch_size, beta, spike_grad, net
 
 if spike_grad == "fast_sigmoid":
     spike_grad = surrogate.fast_sigmoid()
