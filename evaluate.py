@@ -12,9 +12,9 @@ from tqdm import tqdm
 import numpy as np
 
 import torch.optim as optim
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
 
-from architectures import RecurrentSNN, CorticalColumnNetV4, RecurrentSNN_v2, RecurrentSNN_v4
+from architectures import RecurrentSNN, CorticalColumnNetV4, RecurrentSNN_v2, RecurrentSNN_v4, RecurrentSNN_v5
 
 from config import num_steps, batch_size, num_classes, beta, spike_grad, net
 if spike_grad == "fast_sigmoid":
@@ -30,23 +30,23 @@ else:
 
 net = net.to(net.device)
 
-model_path = "63.39_snn_v4.pth"
-model_weights = torch.load(model_path, map_location=net.device)
+#model_path = "66.07_snn_v4.pth"
+#model_weights = torch.load(model_path, map_location=net.device)
 
 #Load the weights into the network architecture
-net.load_state_dict(model_weights)
+#net.load_state_dict(model_weights)
 
 #Loss and optimizer
 criterion = nn.CrossEntropyLoss()
 
 optimizer = optim.Adam(net.parameters(), lr=0.005)
 
-scheduler = StepLR(optimizer, step_size=5, gamma=0.9)
+scheduler = StepLR(optimizer, step_size=5, gamma=0.95)
 
 # Number of epochs  
-num_epochs = 30
+num_epochs = 35
 train_loader_elements = len(train_loader.dataset)
-best_val_accuracy = 0.63
+best_val_accuracy = 0.67
 
 try:
     for epoch in range(num_epochs):
@@ -132,4 +132,8 @@ all_preds = np.concatenate(all_preds)
 all_labels = np.concatenate(all_labels)
 test_accuracy = accuracy_score(all_preds, all_labels)
 
+conf_mat = confusion_matrix(all_labels, all_preds)
+
+# If you want to print the confusion matrix
+print(conf_mat)
 print(f"Test Accuracy: {test_accuracy*100:.2f}%")

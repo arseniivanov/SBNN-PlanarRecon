@@ -4,7 +4,7 @@ from snntorch import utils
 import numpy as np
 from snntorch import surrogate
 from sklearn.metrics import accuracy_score
-from architectures import RecurrentSNN_v2
+from architectures import RecurrentSNN_v4
 from config import num_steps, batch_size, num_classes, beta, spike_grad, net
 
 if spike_grad == "fast_sigmoid":
@@ -16,7 +16,7 @@ def evaluate_and_visualize(model, test_loader, device):
     all_labels = []
     
     with torch.no_grad():
-        for batch_idx, (data, target) in enumerate(test_loader):
+        for (data, target) in test_loader:
             data, target = data.to(device), target.to(device)
 
             utils.reset(model)
@@ -41,9 +41,9 @@ from data_loader import get_loaders  # Assuming get_loaders is a function you've
 train_loader, val_loader, test_loader = get_loaders(batch_size)
 
 # Initialize the neural network model and load pre-trained weights
-model_path = "63.39_snn_v2.pth"
+model_path = "66.07_snn_v4.pth"
 model_weights = torch.load(model_path)
-net = RecurrentSNN_v2(beta, spike_grad, eval_mode=True)
+net = RecurrentSNN_v4(beta, spike_grad, eval_mode=True,plot_pred=True)
 net.load_state_dict(model_weights)
 net = net.to(net.device)
 

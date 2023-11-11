@@ -26,7 +26,11 @@ Test Accuracy: 58.93%
 We can see the network has a hard time classifying jogging people. It is putting then mostly in walking or running bucket.
 One can theorize that the 5x5 filters do not have a large enough receptive field to capture this motion in the 120x160 resolution frames
 
+It seems like thresholding the difference yields faster training time, but convergeance to the same value.
+
 TODO:
+
+Re-make/cache the frame preprocessing in a way where we keep the generators while having information about frame counts and batch buckets
 
 Understand why load + eval mode does not function as intended.
 Breakpoint at eval after 1 train loop with low LR + breakpoint at eval only.

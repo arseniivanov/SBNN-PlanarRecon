@@ -324,7 +324,7 @@ class RecurrentSNN_v4(nn.Module):
         if self.eval_mode:
             self.eval_data = x.cpu().detach().numpy()
 
-        for step in range(num_steps):
+        for step in range(x.shape[0]):
 
             out = self.conv1(x[step])
             out = self.bn1(out)
@@ -381,6 +381,87 @@ class RecurrentSNN_v4(nn.Module):
 
         return spike_out
 
+class RecurrentSNN_v5(nn.Module):
+    def __init__(self, beta, spike_grad, eval_mode=False, plot_pred=False):
+        super(RecurrentSNN_v5, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, 5, stride=2)
+        self.conv2 = nn.Conv2d(32, 32, 3, stride=2)
+        self.conv3 = nn.Conv2d(32, 32, 3, stride=2)
+        self.fc1 = nn.Linear(7488, 256)
+        self.fc2 = nn.Linear(256, num_classes)
+
+        self.leaky1 = snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad)
+        self.leaky2 = snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad)
+        self.leaky3 = snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad)
+        self.leaky4 = snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad)
+        self.leaky_out = snn.Leaky(beta=beta, init_hidden=True, spike_grad=spike_grad, output=True)
+
+        self.attention = nn.Linear(32, 32)  # Assuming 64 channels in spike3
+        self.dropout = nn.Dropout(0.3)
+        self.device = "cpu"
+        self.decay_factor = 0.7
+        self.eval_mode = eval_mode
+        self.plot_pred = plot_pred
+
+    def forward(self, x, target_label=None):
+        recurrent_spike = None
+
+        if self.eval_mode:
+            self.eval_data = x.cpu().detach().numpy()
+
+        for step in range(num_steps):
+
+            out = self.conv1(x[step])
+
+            spike1 = self.leaky1(out)
+            spike1 = k_wta(spike1, sparsity_level=0.6)
+            if DEBUG:
+                print(f"Layer 1, Step {step}, Spike Sum: {spike1.sum().item()}")
+
+            if recurrent_spike is not None:
+                spike1 = spike1 + recurrent_spike  # Add recurrent connection
+        
+            out = self.conv2(spike1)
+            spike2 = self.leaky2(out)
+            if DEBUG:
+                print(f"Layer 2, Step {step}, Spike Sum: {spike2.sum().item()}")
+
+            out = self.conv3(spike2)
+
+            spike3 = self.leaky3(out)
+            out = spike3
+            if DEBUG:
+                print(f"Layer 3, Step {step}, Spike Sum: {spike3.sum().item()}")
+
+            attention_weights = F.softmax(self.attention(spike3.permute(0, 2, 3, 1)), dim=3)
+            out = out * attention_weights.permute(0, 3, 1, 2)
+
+            out = nn.Flatten()(out)
+            out = self.fc1(out)
+            spike4 = self.leaky4(out)
+            if DEBUG:
+                print(f"Layer 4, Step {step}, Spike Sum: {spike4.sum().item()}")
+
+            out = self.fc2(spike4)
+            spike_out, _ = self.leaky_out(out)
+            if DEBUG:
+                print(f"Output Layer, Step {step}, Spike Sum: {spike_out.sum().item()}")
+
+            recurrent_spike = self.dropout(spike1)   # Store spike for recurrent connection
+            recurrent_spike *= self.decay_factor
+
+            if self.eval_mode and self.plot_pred:
+                pred_label = spike_out.argmax(dim=1).cpu().numpy()
+                img_to_show = self.eval_data[step, 0, 0, :, :]
+                plt.imshow(img_to_show, cmap='gray')
+                title_str = f"Step: {step}, Prediction: {pred_label}"
+                if target_label is not None:
+                    title_str += f", Target: {target_label}"
+                plt.title(title_str)
+                plt.pause(0.1)
+                plt.clf()
+
+        return spike_out
 
 class CorticalColumnNetV4(nn.Module):
     def __init__(self):
