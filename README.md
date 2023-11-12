@@ -1,4 +1,4 @@
-# SBNN-PlanarRecon
+# SNN-PlanarRecon
 Implementation of plane recognition using a spiking neural network
 
 The scope of this project is an alternative implementation of a digital network using SNN's for the same task.
@@ -15,12 +15,12 @@ Example confusion matrix:
 
 ['walking', 'jogging', 'running', 'boxing', 'handwaving', 'handclapping']
 
-[[14  3  3  0  0  0]
- [ 7  2  8  0  0  0]
- [ 2  5 12  0  0  0]
- [ 1  0  1 14  4  0]
- [ 1  0  2  2 12  2]
- [ 0  0  1  3  1 12]]
+[[14  3  3  0  0  0]<br>
+ [ 7  2  8  0  0  0]<br>
+ [ 2  5 12  0  0  0]<br>
+ [ 1  0  1 14  4  0]<br>
+ [ 1  0  2  2 12  2]<br>
+ [ 0  0  1  3  1 12]]<br>
 Test Accuracy: 58.93%
 
 We can see the network has a hard time classifying jogging people. It is putting then mostly in walking or running bucket.
@@ -45,8 +45,12 @@ If these parameters are not the same, the preprocessing will not be the same, wh
 
 Adjust samping on a class-basis in order to remove the temporal bias (predictions made from context length)
 
-Understand why load + eval mode does not function as intended.
-Breakpoint at eval after 1 train loop with low LR + breakpoint at eval only.
 Use first N frames to understand an area of movement, crop the movement only while tracking any movement of the area
 
+----------------------------
 
+The project is currently discontinued due to the fact that the spiking neurons in the snnTorch library do not provide a realistic approach to SNN's.
+When only the activations are spiking, we are still required to provide a global receptive field to the algoritm. This in my opinion slightly defeats the purpose.
+The point of SNN's is to allow for sparse compute on neuromorphic hardware, this solution does not do that.
+
+In order for the project to move on, we need to find a different library for SNN estimation.
